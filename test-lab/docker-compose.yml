@@ -1,0 +1,46 @@
+services:
+  ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: macmobaxterm-lab-ssh
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Asia/Shanghai"
+      USER_NAME: "tester"
+      USER_PASSWORD: "password"
+      PASSWORD_ACCESS: "true"
+      SUDO_ACCESS: "false"
+    ports:
+      - "2222:2222"
+    volumes:
+      - ssh-config:/config
+    restart: unless-stopped
+
+  ftp:
+    image: fauria/vsftpd:latest
+    container_name: macmobaxterm-lab-ftp
+    environment:
+      FTP_USER: "tester"
+      FTP_PASS: "password"
+      PASV_ADDRESS: "127.0.0.1"
+      PASV_MIN_PORT: "21100"
+      PASV_MAX_PORT: "21110"
+      LOCAL_UMASK: "022"
+    ports:
+      - "2121:21"
+      - "21100-21110:21100-21110"
+    volumes:
+      - ftp-data:/home/vsftpd
+    restart: unless-stopped
+
+  telnet:
+    build:
+      context: ./telnet
+    container_name: macmobaxterm-lab-telnet
+    ports:
+      - "2323:23"
+    restart: unless-stopped
+
+volumes:
+  ssh-config:
+  ftp-data:

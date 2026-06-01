@@ -40,3 +40,7 @@ swift build
 git add .
 git commit -m "Describe the change"
 ```
+
+## Local Test Lab
+
+Use [test-lab](test-lab/README.md) to start local SSH/SFTP, FTP, Telnet, and virtual serial targets for manual testing.
