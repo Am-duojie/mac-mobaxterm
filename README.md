@@ -25,6 +25,12 @@ Release build:
 swift build -c release
 ```
 
+Build and open the latest local app bundle:
+
+```bash
+./scripts/run_dev_app.sh
+```
+
 ## Development
 
 Before changing code, check the worktree:
