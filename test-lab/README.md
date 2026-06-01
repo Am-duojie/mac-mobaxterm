@@ -23,6 +23,8 @@ cd test-lab
 docker compose up -d
 ```
 
+First startup will build three small Alpine-based images locally.
+
 Check services:
 
 ```bash
