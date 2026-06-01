@@ -31,9 +31,9 @@ struct TerminalAreaView: View {
             }
             Button { sessionManager.openLocalSession() } label: {
                 Image(systemName: "plus").font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.secondary).frame(width: 24, height: 24)
+                    .foregroundStyle(.white.opacity(0.7)).frame(width: 24, height: 24)
             }.buttonStyle(.plain).help("新建终端")
-        }.frame(height: 32).background(Color(NSColor.windowBackgroundColor))
+        }.frame(height: 34).background(Color(red: 0.10, green: 0.11, blue: 0.12))
     }
 }
 
@@ -48,11 +48,12 @@ struct TabItem: View {
                 .foregroundStyle(session.isConnected ? .green : .orange)
             Text(session.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
             Button { sessionManager.closeSession(session.id) } label: {
-                Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+                Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.65))
             }.buttonStyle(.plain).opacity(isSelected ? 1 : 0)
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(isSelected ? Color.black.opacity(0.3) : Color.clear)
+        .foregroundStyle(isSelected ? .white : .white.opacity(0.65))
+        .background(isSelected ? Color(red: 0.18, green: 0.20, blue: 0.23) : Color.clear)
         .overlay(alignment: .bottom) { if isSelected { Color.accentColor.frame(height: 2) } }
         .onTapGesture { sessionManager.selectedSessionId = session.id }
         .contextMenu {

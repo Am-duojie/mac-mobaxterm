@@ -11,14 +11,17 @@ struct TerminalSessionView: View {
             if showConnectionStatusBar {
                 HStack(spacing: 6) {
                     Circle().fill(session.isConnected ? .green : .orange).frame(width: 6, height: 6)
-                    Text(session.statusMessage).font(.caption).foregroundStyle(.secondary)
+                    Text(session.statusMessage).font(.caption).foregroundStyle(.white.opacity(0.82))
                     Spacer()
                     if let conn = session.connection {
                         Text(session.type == .serial ? "\(conn.serialPort) @ \(conn.serialBaud)" : "\(conn.host):\(conn.port)")
                             .font(.caption)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.white.opacity(0.55))
                     }
-                }.padding(.horizontal, 12).padding(.vertical, 4).background(Color.black.opacity(0.4))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Color(red: 0.06, green: 0.07, blue: 0.08))
             }
             
             if session.type == .rdp || session.type == .vnc {
@@ -40,8 +43,10 @@ struct TerminalSessionView: View {
                 }.frame(maxWidth: .infinity).background(Color.black)
             } else {
                 SwiftTerminalHost(session: session)
+                    .background(Color.black)
             }
         }
+        .background(Color.black)
     }
 }
 
@@ -53,6 +58,7 @@ struct SwiftTerminalHost: NSViewRepresentable {
         let fontSize = UserDefaults.standard.double(forKey: "terminalFontSize")
         terminal.processDelegate = context.coordinator
         terminal.font = NSFont(name: "Menlo", size: fontSize > 0 ? fontSize : 14) ?? NSFont.monospacedSystemFont(ofSize: fontSize > 0 ? fontSize : 14, weight: .regular)
+        terminal.wantsLayer = true
         terminal.nativeForegroundColor = NSColor.white
         terminal.nativeBackgroundColor = NSColor.black
         terminal.caretColor = NSColor.white
@@ -60,8 +66,8 @@ struct SwiftTerminalHost: NSViewRepresentable {
         terminal.selectedTextBackgroundColor = NSColor.selectedTextBackgroundColor
         terminal.useBrightColors = true
         terminal.allowMouseReporting = true
-        terminal.configureNativeColors()
         terminal.layer?.backgroundColor = NSColor.black.cgColor
+        terminal.needsDisplay = true
         startProcess(on: terminal)
         return terminal
     }
