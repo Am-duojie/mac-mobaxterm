@@ -12,15 +12,18 @@ brew install socat
 Example output:
 
 ```text
-PTY is /dev/ttys001
-PTY is /dev/ttys002
+Use this path in MacMobaXterm:
+  /tmp/macmobaxterm-serial-app
+
+Use this path in Terminal:
+  screen /tmp/macmobaxterm-serial-peer 115200
 ```
 
 ## Test
 
 Create a Serial session in MacMobaXterm:
 
-- Device: first printed path, for example `/dev/ttys001`
+- Device: `/tmp/macmobaxterm-serial-app`
 - Baud: `115200`
 - Data bits: `8`
 - Parity: `N`
@@ -29,9 +32,9 @@ Create a Serial session in MacMobaXterm:
 In macOS Terminal:
 
 ```bash
-screen /dev/ttys002 115200
+screen /tmp/macmobaxterm-serial-peer 115200
 ```
 
-Typing in either terminal should show text in the other.
+Typing in either terminal should show text in the other. This is a raw serial link, so there is no shell prompt and no local echo unless the other side sends the text back.
 
 Quit `screen` with `Ctrl-A`, then `K`, then `Y`.
