@@ -277,7 +277,16 @@ struct SessionEditorView: View {
             FieldRow(label: "串口设备:") {
                 HStack {
                     TextField("/dev/tty.usbserial", text: $serialPort).textFieldStyle(.roundedBorder).focused($focusedField, equals: .serial)
-                    Button("选择...") { pickSerialPort() }
+                    Menu("选择...") {
+                        let ports = availableSerialPorts()
+                        if ports.isEmpty {
+                            Text("未发现串口设备")
+                        } else {
+                            ForEach(ports, id: \.self) { port in
+                                Button(port) { serialPort = port }
+                            }
+                        }
+                    }
                 }
             }
             FieldRow(label: "波特率:") {
@@ -424,26 +433,14 @@ struct SessionEditorView: View {
         }
     }
     
-    private func pickSerialPort() {
+    private func availableSerialPorts() -> [String] {
         let fm = FileManager.default
         let devPath = "/dev/"
-        guard let items = try? fm.contentsOfDirectory(atPath: devPath) else { return }
-        let serialPorts = items.filter { $0.hasPrefix("tty.") || $0.hasPrefix("cu.") }.sorted()
-        
-        // 用 open panel 让用户选择
-        let panel = NSOpenPanel()
-        panel.title = "选择串口设备"
-        panel.directoryURL = URL(fileURLWithPath: "/dev")
-        panel.allowedContentTypes = []
-        panel.allowsOtherFileTypes = true
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.nameFieldStringValue = serialPorts.first ?? "tty.usbserial"
-        
-        if panel.runModal() == .OK, let url = panel.url {
-            serialPort = url.path
-        }
+        guard let items = try? fm.contentsOfDirectory(atPath: devPath) else { return [] }
+        return items
+            .filter { $0.hasPrefix("tty.") || $0.hasPrefix("cu.") || $0.hasPrefix("ttys") }
+            .sorted()
+            .map { "/dev/" + $0 }
     }
     
     private func pickPrivateKey() {
