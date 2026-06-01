@@ -6,74 +6,141 @@ struct MenuBarView: View {
     @Binding var showSFTP: Bool
     @Binding var showNetworkTools: Bool
     @Binding var showSettings: Bool
+    @State private var quickConnect: String = ""
     
     var body: some View {
-        HStack(spacing: 0) {
-            MenuBtn("终端") {
-                let m = NSMenu()
-                m.addItem(withTitle: "新建本地终端", action: #selector(Acts.a1), keyEquivalent: "")
-                m.addItem(withTitle: "新建SSH连接", action: #selector(Acts.a2), keyEquivalent: "")
-                m.addItem(.separator())
-                m.addItem(withTitle: "关闭当前标签", action: #selector(Acts.a3), keyEquivalent: "")
-                m.addItem(withTitle: "关闭全部标签", action: #selector(Acts.a4), keyEquivalent: "")
-                return m
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Group {
+                    MenuBtn("Terminal") {
+                        let m = NSMenu()
+                        m.addItem(withTitle: "新建本地终端", action: #selector(Acts.a1), keyEquivalent: "")
+                        m.addItem(withTitle: "新建SSH连接", action: #selector(Acts.a2), keyEquivalent: "")
+                        m.addItem(.separator())
+                        m.addItem(withTitle: "关闭当前标签", action: #selector(Acts.a3), keyEquivalent: "")
+                        m.addItem(withTitle: "关闭全部标签", action: #selector(Acts.a4), keyEquivalent: "")
+                        return m
+                    }
+                    MenuBtn("Sessions") {
+                        let m = NSMenu()
+                        m.addItem(withTitle: "新建会话...", action: #selector(Acts.a2), keyEquivalent: "")
+                        m.addItem(.separator())
+                        m.addItem(withTitle: "导入会话...", action: #selector(Acts.a5), keyEquivalent: "")
+                        m.addItem(withTitle: "导出会话...", action: #selector(Acts.a6), keyEquivalent: "")
+                        return m
+                    }
+                    MenuBtn("View") {
+                        let m = NSMenu()
+                        m.addItem(withTitle: showSFTP ? "隐藏SFTP" : "显示SFTP", action: #selector(Acts.a7), keyEquivalent: "")
+                        return m
+                    }
+                    MenuBtn("X server") { NSMenu() }
+                    MenuBtn("Tools") {
+                        let m = NSMenu()
+                        m.addItem(withTitle: "网络工具箱...", action: #selector(Acts.a8), keyEquivalent: "")
+                        m.addItem(.separator())
+                        m.addItem(withTitle: "SSH密钥生成...", action: #selector(Acts.a9), keyEquivalent: "")
+                        m.addItem(withTitle: "打开.ssh目录", action: #selector(Acts.a10), keyEquivalent: "")
+                        return m
+                    }
+                    MenuBtn("Settings") {
+                        let m = NSMenu()
+                        m.addItem(withTitle: "偏好设置...", action: #selector(Acts.a11), keyEquivalent: "")
+                        return m
+                    }
+                    MenuBtn("Macros") { NSMenu() }
+                    MenuBtn("Help") {
+                        let m = NSMenu()
+                        m.addItem(withTitle: "关于", action: #selector(Acts.a12), keyEquivalent: "")
+                        return m
+                    }
+                }
+                Spacer()
             }
-            MenuBtn("会话") {
-                let m = NSMenu()
-                m.addItem(withTitle: "新建会话...", action: #selector(Acts.a2), keyEquivalent: "")
-                m.addItem(.separator())
-                m.addItem(withTitle: "导入会话...", action: #selector(Acts.a5), keyEquivalent: "")
-                m.addItem(withTitle: "导出会话...", action: #selector(Acts.a6), keyEquivalent: "")
-                return m
+            .frame(height: 24)
+            .padding(.leading, 8)
+
+            HStack(spacing: 10) {
+                ribbonButton("display.badge.plus", "Session", .blue) { sessionManager.showConnectionEditor = true }
+                ribbonButton("point.3.connected.trianglepath.dotted", "Servers", .cyan) {}
+                ribbonButton("wrench.and.screwdriver.fill", "Tools", .orange) { showNetworkTools = true }
+                ribbonButton("star.fill", "Sessions", .yellow) {}
+                ribbonButton("display", "View", .green) {}
+                ribbonButton("rectangle.split.2x1", "Split", .blue) {}
+                ribbonButton("arrow.left.arrow.right.square", "Tunneling", .teal) {}
+                ribbonButton("shippingbox.fill", "Packages", .indigo) {}
+                ribbonButton("gearshape.2.fill", "Settings", .blue) { showSettings = true }
+                ribbonButton("questionmark.circle.fill", "Help", .blue) {}
+
+                Spacer(minLength: 8)
+
+                ribbonButton("xmark.seal.fill", "X server", .green) {}
+                ribbonButton("power.circle.fill", "Exit", .red) { NSApplication.shared.terminate(nil) }
             }
-            MenuBtn("视图") {
-                let m = NSMenu()
-                m.addItem(withTitle: showSFTP ? "隐藏SFTP" : "显示SFTP", action: #selector(Acts.a7), keyEquivalent: "")
-                return m
+            .frame(height: 68)
+            .padding(.horizontal, 10)
+            .background(Color(NSColor.windowBackgroundColor))
+
+            HStack(spacing: 0) {
+                TextField("Quick connect...", text: $quickConnect)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .padding(.horizontal, 12)
+                    .frame(height: 28)
+                    .onSubmit { runQuickConnect() }
+                Button { runQuickConnect() } label: {
+                    Image(systemName: "arrow.forward.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.blue)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .help("快速 SSH 连接")
             }
-            MenuBtn("工具") {
-                let m = NSMenu()
-                m.addItem(withTitle: "网络工具箱...", action: #selector(Acts.a8), keyEquivalent: "")
-                m.addItem(.separator())
-                m.addItem(withTitle: "SSH密钥生成...", action: #selector(Acts.a9), keyEquivalent: "")
-                m.addItem(withTitle: "打开.ssh目录", action: #selector(Acts.a10), keyEquivalent: "")
-                return m
-            }
-            MenuBtn("设置") {
-                let m = NSMenu()
-                m.addItem(withTitle: "偏好设置...", action: #selector(Acts.a11), keyEquivalent: "")
-                return m
-            }
-            MenuBtn("帮助") {
-                let m = NSMenu()
-                m.addItem(withTitle: "关于", action: #selector(Acts.a12), keyEquivalent: "")
-                return m
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 6) {
-                swBtn("plus", "新建会话") { sessionManager.showConnectionEditor = true }
-                swBtn("terminal", "本地终端") { sessionManager.openLocalSession() }
-                swBtn("arrow.triangle.2.circlepath", "SFTP") { showSFTP.toggle() }
-                swBtn("wrench.and.screwdriver", "工具") { showNetworkTools = true }
-            }.padding(.trailing, 10)
+            .background(Color.white)
+            .overlay(Rectangle().stroke(Color.black.opacity(0.18), lineWidth: 1))
         }
-        .frame(height: 36)
+        .frame(height: 120)
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear { Acts.shared.setup(sessionManager, sftp: $showSFTP, tools: $showNetworkTools, settings: $showSettings) }
     }
     
-    func swBtn(_ icon: String, _ title: String, action: @escaping () -> Void) -> some View {
+    func ribbonButton(_ icon: String, _ title: String, _ color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 12))
-                Text(title).font(.system(size: 12))
+            VStack(spacing: 3) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(color.opacity(0.12))
+                        .frame(width: 34, height: 30)
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(color)
+                }
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.primary)
             }
-            .padding(.horizontal, 12).padding(.vertical, 6)
+            .frame(width: 70, height: 58)
             .contentShape(Rectangle())
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.1)))
-        }.buttonStyle(.plain)
+        }
+        .buttonStyle(.plain)
+        .help(title)
+    }
+
+    private func runQuickConnect() {
+        let raw = quickConnect.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return }
+        var conn = Connection()
+        conn.type = .ssh
+        conn.port = 22
+        if let at = raw.firstIndex(of: "@") {
+            conn.username = String(raw[..<at])
+            conn.host = String(raw[raw.index(after: at)...])
+        } else {
+            conn.host = raw
+        }
+        sessionManager.openSSH(conn)
+        quickConnect = ""
     }
 }
 
@@ -107,7 +174,7 @@ struct MenuBtn: NSViewRepresentable {
         ])
         
         // 设最小宽度，保证能点到
-        let w = max(50, (title as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width + 20)
+        let w = max(48, (title as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width + 14)
         container.widthAnchor.constraint(greaterThanOrEqualToConstant: w).isActive = true
         
         return container

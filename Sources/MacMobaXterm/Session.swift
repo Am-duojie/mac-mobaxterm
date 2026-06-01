@@ -14,12 +14,14 @@ class Session: Identifiable, ObservableObject {
     @Published var icon: String
     @Published var isConnected: Bool = false
     @Published var statusMessage: String = ""
+    @Published var remoteBrowserPath: String
     
     init(type: TabType, connection: Connection? = nil) {
         self.id = UUID()
         self.type = type
         self.connection = connection
         self.createdAt = Date()
+        self.remoteBrowserPath = connection?.remotePath.isEmpty == false ? connection?.remotePath ?? "~" : "~"
         switch type {
         case .local:
             self.title = "本地终端"; self.icon = "terminal"; self.statusMessage = "本地Shell"

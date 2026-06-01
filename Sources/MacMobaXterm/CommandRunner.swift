@@ -42,4 +42,43 @@ enum CommandRunner {
         }
         return CommandResult(status: process.terminationStatus, output: output, timedOut: timedOut)
     }
+
+    static func runExpectingPassword(
+        _ executable: String,
+        _ arguments: [String],
+        password: String,
+        timeout: TimeInterval = 20
+    ) -> CommandResult {
+        let script = """
+        set timeout \(Int(timeout))
+        set password [lindex $argv 0]
+        set executable [lindex $argv 1]
+        set commandArgs [lrange $argv 2 end]
+        spawn -noecho $executable {*}$commandArgs
+        expect {
+            -re "(?i)password:" {
+                send -- "$password\\r"
+                exp_continue
+            }
+            -re "(?i)passphrase.*:" {
+                send -- "$password\\r"
+                exp_continue
+            }
+            eof {
+                catch wait result
+                exit [lindex $result 3]
+            }
+            timeout {
+                exit 124
+            }
+        }
+        """
+        var expectArgs = ["-c", script, password, executable]
+        expectArgs += arguments
+        let result = run("/usr/bin/expect", expectArgs, timeout: timeout + 2)
+        if result.status == 124 || result.timedOut {
+            return CommandResult(status: result.status, output: "命令超时，已终止。", timedOut: true)
+        }
+        return result
+    }
 }

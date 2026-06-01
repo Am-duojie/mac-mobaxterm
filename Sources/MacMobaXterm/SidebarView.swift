@@ -41,7 +41,14 @@ struct SidebarView: View {
             Divider()
             
             if selectedTab == .sessions {
-                sessionsList
+                VStack(spacing: 0) {
+                    sessionsList
+                    if let session = selectedRemoteFileSession {
+                        Divider()
+                        RemoteFileBrowserView(session: session)
+                            .frame(minHeight: 220, idealHeight: 280, maxHeight: 360)
+                    }
+                }
             } else {
                 toolsList
             }
@@ -61,6 +68,13 @@ struct SidebarView: View {
         .background(Color(NSColor.controlBackgroundColor))
         .onAppear { expandedFolders = Set(sessionManager.folders.map { $0.id }) }
         .sheet(isPresented: $showNetworkTools) { NetworkToolsView() }
+    }
+
+    private var selectedRemoteFileSession: Session? {
+        guard let session = sessionManager.selectedSession,
+              session.isConnected,
+              session.type == .ssh || session.type == .sftp else { return nil }
+        return session
     }
     
     // MARK: - 会话列表
@@ -179,13 +193,22 @@ struct FolderSection: View {
 struct ConnectionRow: View {
     @EnvironmentObject var sessionManager: SessionManager
     let connection: Connection
+    @State private var isRenaming: Bool = false
+    @State private var draftName: String = ""
     
     var body: some View {
         HStack(spacing: 6) {
             Circle().fill(colorForTag(connection.colorTag)).frame(width: 6, height: 6)
             VStack(alignment: .leading, spacing: 0) {
-                Text(connection.name.isEmpty ? "\(connection.host) (\(connection.username))" : connection.name)
-                    .font(.system(size: 11)).lineLimit(1)
+                if isRenaming {
+                    TextField("会话名称", text: $draftName)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11))
+                        .onSubmit { commitRename() }
+                } else {
+                    Text(connection.name.isEmpty ? "\(connection.host) (\(connection.username))" : connection.name)
+                        .font(.system(size: 11)).lineLimit(1)
+                }
                 if !connection.host.isEmpty { Text(connection.host).font(.system(size: 10)).foregroundStyle(.secondary) }
             }
             Spacer()
@@ -196,12 +219,19 @@ struct ConnectionRow: View {
         }
         .padding(.horizontal, 6).padding(.vertical, 3).contentShape(Rectangle())
         .background(RoundedRectangle(cornerRadius: 3).fill(sessionManager.selectedConnectionId == connection.id ? Color.accentColor.opacity(0.15) : Color.clear))
-        .onTapGesture { sessionManager.openEditConnectionEditor(connection) }
+        .onTapGesture { sessionManager.selectedConnectionId = connection.id }
+        .onTapGesture(count: 2) { sessionManager.openConnection(connection) }
         .contextMenu {
-            Button("连接") { sessionManager.openConnection(connection) }
-            Button("编辑...") { sessionManager.openEditConnectionEditor(connection) }
+            Button("执行") { sessionManager.openConnection(connection) }
+            Button("连接为...") { sessionManager.openEditConnectionEditor(connection) }
+            Button("Ping 主机") { sessionManager.showConnectionEditor = false }
             Divider()
-            Button("复制") { sessionManager.duplicateConnection(connection) }
+            Button("重命名会话") { beginRename() }
+            Button("编辑...") { sessionManager.openEditConnectionEditor(connection) }
+            Button("复制会话") { sessionManager.duplicateConnection(connection) }
+            Divider()
+            Button("保存会话到文件...") { exportConnection() }
+            Button("复制会话设置") { copyConnectionSummary() }
             Divider()
             Button("删除", role: .destructive) { sessionManager.deleteConnection(connection) }
         }
@@ -213,6 +243,35 @@ struct ConnectionRow: View {
         case "green": return .green; case "blue": return .blue; case "purple": return .purple
         case "pink": return .pink; default: return .gray
         }
+    }
+
+    private func beginRename() {
+        draftName = connection.name.isEmpty ? connection.displayName : connection.name
+        isRenaming = true
+    }
+
+    private func commitRename() {
+        var renamed = connection
+        renamed.name = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
+        sessionManager.updateConnection(renamed)
+        isRenaming = false
+    }
+
+    private func exportConnection() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "\(connection.displayName).json"
+        if panel.runModal() == .OK,
+           let url = panel.url,
+           let data = try? JSONEncoder().encode(connection) {
+            try? data.write(to: url)
+        }
+    }
+
+    private func copyConnectionSummary() {
+        let text = "\(connection.type.rawValue.uppercased()) \(connection.displayName) \(connection.host):\(connection.port)"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 }
 

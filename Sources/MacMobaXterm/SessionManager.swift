@@ -66,21 +66,22 @@ class SessionManager: ObservableObject {
     
     // MARK: - 会话管理
     func openConnection(_ conn: Connection) {
-        switch conn.type {
+        let hydrated = hydrateCredentials(for: conn)
+        switch hydrated.type {
         case .ssh:
-            openSSH(conn)
+            openSSH(hydrated)
         case .sftp:
-            openSFTP(conn)
+            openSFTP(hydrated)
         case .telnet:
-            openTelnet(conn)
+            openTelnet(hydrated)
         case .rdp:
-            openRDP(conn)
+            openRDP(hydrated)
         case .ftp:
-            openFTP(conn)
+            openFTP(hydrated)
         case .vnc:
-            openVNC(conn)
+            openVNC(hydrated)
         case .serial:
-            openSerial(conn, port: conn.serialPort, baud: conn.serialBaud)
+            openSerial(hydrated, port: hydrated.serialPort, baud: hydrated.serialBaud)
         case .local:
             openLocalSession()
         }
@@ -253,6 +254,10 @@ bitmapcachepersistenable:i:1
             c.passphrase = credential.passphrase
         }
         return c
+    }
+
+    func connectionWithCredentials(_ connection: Connection) -> Connection {
+        hydrateCredentials(for: connection)
     }
     
     private func migratePlaintextCredentials() {

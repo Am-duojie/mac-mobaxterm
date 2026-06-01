@@ -128,7 +128,20 @@ struct SwiftTerminalHost: NSViewRepresentable {
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
             DispatchQueue.main.async { self.session.title = title }
         }
-        func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
+        func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
+            guard self.session.type == .ssh || self.session.type == .sftp,
+                  let directory,
+                  !directory.isEmpty else { return }
+            let path: String
+            if let url = URL(string: directory), url.isFileURL {
+                path = url.path
+            } else {
+                path = directory
+            }
+            DispatchQueue.main.async {
+                self.session.remoteBrowserPath = path
+            }
+        }
         func processTerminated(source: TerminalView, exitCode: Int32?) {
             DispatchQueue.main.async {
                 self.session.isConnected = false
