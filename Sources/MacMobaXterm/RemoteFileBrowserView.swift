@@ -169,7 +169,7 @@ struct RemoteFileBrowserView: View {
             return
         }
 
-        let conn = sessionManager.connectionWithCredentials(connection)
+        let conn = connection
         guard session.type == .ssh || session.type == .sftp else {
             remoteFiles = []
             remoteStatus = "当前会话不是 SSH/SFTP"
@@ -208,7 +208,7 @@ struct RemoteFileBrowserView: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let conn = sessionManager.connectionWithCredentials(connection)
+        let conn = connection
         let destination = "\(remoteResolvedPath())/\(url.lastPathComponent)"
         runTransfer(connection: conn, local: url.path, remote: destination, upload: true) {
             loadRemoteFiles(path: pathText)
@@ -217,7 +217,7 @@ struct RemoteFileBrowserView: View {
 
     private func downloadSelected() {
         guard let connection = session.connection, let selectedRemote else { return }
-        let conn = sessionManager.connectionWithCredentials(connection)
+        let conn = connection
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first?.path ?? NSHomeDirectory()
         runTransfer(connection: conn, local: downloads, remote: selectedRemote.path, upload: false) {}
     }
@@ -235,7 +235,7 @@ struct RemoteFileBrowserView: View {
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
-        let conn = sessionManager.connectionWithCredentials(connection)
+        let conn = connection
         let command = "mkdir -p \(remoteShellPath(remoteResolvedPath() + "/" + name))"
         runRemoteCommand(connection: conn, command: command) {
             loadRemoteFiles(path: pathText)
@@ -250,7 +250,7 @@ struct RemoteFileBrowserView: View {
         alert.addButton(withTitle: "删除")
         alert.addButton(withTitle: "取消")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        let conn = sessionManager.connectionWithCredentials(connection)
+        let conn = connection
         let command = selectedRemote.isDirectory ? "rm -rf \(selectedRemote.path.shellQuoted)" : "rm -f \(selectedRemote.path.shellQuoted)"
         runRemoteCommand(connection: conn, command: command) {
             loadRemoteFiles(path: pathText)
