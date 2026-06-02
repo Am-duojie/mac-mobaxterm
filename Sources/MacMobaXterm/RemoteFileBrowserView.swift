@@ -323,7 +323,7 @@ struct RemoteFileBrowserView: View {
             args += ["-o", "BatchMode=yes"]
         }
         let target = conn.username.isEmpty ? conn.host : "\(conn.username)@\(conn.host)"
-        let command = "cd \(remoteShellPath(path)) && pwd && printf '\\n__MACMOBAXTERM_LS__\\n' && LC_ALL=C ls -la"
+        let command = "cd \(remoteShellPath(path)) && pwd && echo __MACMOBAXTERM_LS__ && LC_ALL=C ls -la"
         args += [target, command]
 
         if conn.authMethod == .password, !conn.password.isEmpty {
@@ -345,14 +345,17 @@ struct RemoteFileBrowserView: View {
     }
 
     private func parseRemoteListing(_ output: String, fallbackPath: String) -> (path: String, files: [FileItem])? {
-        let sections = output.components(separatedBy: "\n__MACMOBAXTERM_LS__\n")
-        guard sections.count == 2 else { return nil }
-        let resolvedPath = sections[0]
-            .split(separator: "\n")
-            .last
-            .map(String.init) ?? fallbackPath
-        let files = sections[1]
-            .split(separator: "\n")
+        let lines = output
+            .replacingOccurrences(of: "\r", with: "")
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+        guard let markerIndex = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines) == "__MACMOBAXTERM_LS__" }) else {
+            return nil
+        }
+        let resolvedPath = lines[..<markerIndex]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .last { !$0.isEmpty && !$0.localizedCaseInsensitiveContains("password:") } ?? fallbackPath
+        let files = lines[(markerIndex + 1)...]
             .compactMap { line -> FileItem? in
                 let parts = line.split(separator: " ", omittingEmptySubsequences: true)
                 guard parts.count >= 9 else { return nil }
