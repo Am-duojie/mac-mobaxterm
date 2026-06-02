@@ -14,44 +14,44 @@ struct MenuBarView: View {
                 Group {
                     MenuBtn("Terminal") {
                         let m = NSMenu()
-                        m.addItem(withTitle: "新建本地终端", action: #selector(Acts.a1), keyEquivalent: "")
-                        m.addItem(withTitle: "新建SSH连接", action: #selector(Acts.a2), keyEquivalent: "")
+                        m.addActionItem("新建本地终端", #selector(Acts.a1))
+                        m.addActionItem("新建SSH连接", #selector(Acts.a2))
                         m.addItem(.separator())
-                        m.addItem(withTitle: "关闭当前标签", action: #selector(Acts.a3), keyEquivalent: "")
-                        m.addItem(withTitle: "关闭全部标签", action: #selector(Acts.a4), keyEquivalent: "")
+                        m.addActionItem("关闭当前标签", #selector(Acts.a3))
+                        m.addActionItem("关闭全部标签", #selector(Acts.a4))
                         return m
                     }
                     MenuBtn("Sessions") {
                         let m = NSMenu()
-                        m.addItem(withTitle: "新建会话...", action: #selector(Acts.a2), keyEquivalent: "")
+                        m.addActionItem("新建会话...", #selector(Acts.a2))
                         m.addItem(.separator())
-                        m.addItem(withTitle: "导入会话...", action: #selector(Acts.a5), keyEquivalent: "")
-                        m.addItem(withTitle: "导出会话...", action: #selector(Acts.a6), keyEquivalent: "")
+                        m.addActionItem("导入会话...", #selector(Acts.a5))
+                        m.addActionItem("导出会话...", #selector(Acts.a6))
                         return m
                     }
                     MenuBtn("View") {
                         let m = NSMenu()
-                        m.addItem(withTitle: showSFTP ? "隐藏SFTP" : "显示SFTP", action: #selector(Acts.a7), keyEquivalent: "")
+                        m.addActionItem(showSFTP ? "隐藏SFTP" : "显示SFTP", #selector(Acts.a7))
                         return m
                     }
                     MenuBtn("X server") { NSMenu() }
                     MenuBtn("Tools") {
                         let m = NSMenu()
-                        m.addItem(withTitle: "网络工具箱...", action: #selector(Acts.a8), keyEquivalent: "")
+                        m.addActionItem("网络工具箱...", #selector(Acts.a8))
                         m.addItem(.separator())
-                        m.addItem(withTitle: "SSH密钥生成...", action: #selector(Acts.a9), keyEquivalent: "")
-                        m.addItem(withTitle: "打开.ssh目录", action: #selector(Acts.a10), keyEquivalent: "")
+                        m.addActionItem("SSH密钥生成...", #selector(Acts.a9))
+                        m.addActionItem("打开.ssh目录", #selector(Acts.a10))
                         return m
                     }
                     MenuBtn("Settings") {
                         let m = NSMenu()
-                        m.addItem(withTitle: "偏好设置...", action: #selector(Acts.a11), keyEquivalent: "")
+                        m.addActionItem("偏好设置...", #selector(Acts.a11))
                         return m
                     }
                     MenuBtn("Macros") { NSMenu() }
                     MenuBtn("Help") {
                         let m = NSMenu()
-                        m.addItem(withTitle: "关于", action: #selector(Acts.a12), keyEquivalent: "")
+                        m.addActionItem("关于", #selector(Acts.a12))
                         return m
                     }
                 }
@@ -227,4 +227,14 @@ class Acts: NSObject {
     @objc func a10() { NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh")) }
     @objc func a11() { settings.wrappedValue = true }
     @objc func a12() { }
+}
+
+private extension NSMenu {
+    func addActionItem(_ title: String, _ action: Selector) {
+        autoenablesItems = false
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = Acts.shared
+        item.isEnabled = true
+        addItem(item)
+    }
 }

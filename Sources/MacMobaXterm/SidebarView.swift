@@ -118,22 +118,25 @@ struct SidebarView: View {
     
     // MARK: - 工具列表
     private var toolsList: some View {
-        List {
-            Section("网络工具") {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                SidebarSectionHeader(title: "网络工具")
                 ToolRow(icon: "wifi", title: "Ping", subtitle: "网络连通性测试") { showNetworkTools = true }
                 ToolRow(icon: "point.3.connected.trianglepath.dotted", title: "路由追踪", subtitle: "Traceroute") { showNetworkTools = true }
                 ToolRow(icon: "globe", title: "DNS查询", subtitle: "域名解析") { showNetworkTools = true }
                 ToolRow(icon: "server.rack", title: "端口扫描", subtitle: "检测开放端口") { showNetworkTools = true }
                 ToolRow(icon: "info.circle", title: "Whois", subtitle: "域名信息查询") { showNetworkTools = true }
                 ToolRow(icon: "network", title: "网络信息", subtitle: "查看本机网络") { showNetworkTools = true }
-            }
-            Section("安全工具") {
+
+                Divider().padding(.vertical, 6)
+                SidebarSectionHeader(title: "安全工具")
                 ToolRow(icon: "key.fill", title: "SSH密钥生成", subtitle: "生成RSA密钥对") { generateSSHKey() }
                 ToolRow(icon: "doc.badge.plus", title: "密钥管理", subtitle: "打开.ssh目录") {
                     NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh"))
                 }
             }
-        }.listStyle(.sidebar)
+            .padding(.vertical, 4)
+        }
     }
     
     private func generateSSHKey() {
@@ -143,6 +146,19 @@ struct SidebarView: View {
         p.arguments = ["-t", "rsa", "-b", "4096", "-f", keyPath, "-N", ""]
         try? p.run()
         p.waitUntilExit()
+    }
+}
+
+struct SidebarSectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
     }
 }
 
@@ -160,8 +176,12 @@ struct ToolRow: View {
                     Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
-            }.padding(.vertical, 6).padding(.horizontal, 4).contentShape(Rectangle())
-        }.buttonStyle(.plain)
+            }
+            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+            .padding(.horizontal, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -217,7 +237,9 @@ struct ConnectionRow: View {
                 .font(.system(size: 8, weight: .medium))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 6).padding(.vertical, 3).contentShape(Rectangle())
+        .padding(.horizontal, 8)
+        .frame(height: 44)
+        .contentShape(Rectangle())
         .background(RoundedRectangle(cornerRadius: 3).fill(sessionManager.selectedConnectionId == connection.id ? Color.accentColor.opacity(0.15) : Color.clear))
         .onTapGesture { sessionManager.selectedConnectionId = connection.id }
         .onTapGesture(count: 2) { sessionManager.openConnection(connection) }
@@ -292,7 +314,10 @@ struct ActiveSessionRow: View {
             Spacer()
             if sessionManager.selectedSessionId == session.id { Circle().fill(Color.accentColor).frame(width: 5, height: 5) }
         }
-        .padding(.horizontal, 8).padding(.vertical, 3).contentShape(Rectangle())
+        .padding(.horizontal, 8)
+        .frame(height: 38)
+        .contentShape(Rectangle())
+        .background(RoundedRectangle(cornerRadius: 3).fill(sessionManager.selectedSessionId == session.id ? Color.accentColor.opacity(0.12) : Color.clear))
         .onTapGesture { sessionManager.selectedSessionId = session.id }
     }
 }
