@@ -8,6 +8,7 @@ struct RemoteFileBrowserView: View {
     @State private var pathText: String = "~"
     @State private var isLoading: Bool = false
     @State private var selectedRemote: FileItem?
+    @State private var bookmarkedPaths: [String] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,7 +37,24 @@ struct RemoteFileBrowserView: View {
             .padding(.vertical, 6)
 
             HStack(spacing: 4) {
-                iconButton("star.fill", "收藏/主页") { loadRemoteFiles(path: "~") }
+                Menu {
+                    Button("收藏当前路径") { addBookmark() }
+                    Divider()
+                    if bookmarkedPaths.isEmpty {
+                        Text("暂无收藏")
+                    } else {
+                        ForEach(bookmarkedPaths, id: \.self) { path in
+                            Button(path) { loadRemoteFiles(path: path) }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 11))
+                        .frame(width: 19, height: 19)
+                }
+                .menuStyle(.borderlessButton)
+                .help("远程路径收藏")
+                iconButton("house.fill", "Home 目录") { loadRemoteFiles(path: "~") }
                 Button { goUp() } label: {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 10))
@@ -120,6 +138,7 @@ struct RemoteFileBrowserView: View {
         .frame(minHeight: 220)
         .background(Color(NSColor.controlBackgroundColor))
         .onAppear {
+            loadBookmarks()
             pathText = normalizedInitialPath()
             loadRemoteFiles(path: pathText)
         }
@@ -148,6 +167,22 @@ struct RemoteFileBrowserView: View {
         if !session.remoteBrowserPath.isEmpty { return session.remoteBrowserPath }
         if let path = session.connection?.remotePath, !path.isEmpty { return path }
         return "~"
+    }
+
+    private var bookmarkStorageKey: String {
+        let account = session.connection?.credentialId ?? session.id.uuidString
+        return "MacMobaXterm.RemoteBookmarks.\(account)"
+    }
+
+    private func loadBookmarks() {
+        bookmarkedPaths = UserDefaults.standard.stringArray(forKey: bookmarkStorageKey) ?? []
+    }
+
+    private func addBookmark() {
+        let path = remoteResolvedPath()
+        guard !bookmarkedPaths.contains(path) else { return }
+        bookmarkedPaths.append(path)
+        UserDefaults.standard.set(bookmarkedPaths, forKey: bookmarkStorageKey)
     }
 
     private func goUp() {
