@@ -94,45 +94,40 @@ struct RemoteFileBrowserView: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                List(remoteFiles, selection: $selectedRemote) { file in
-                    HStack(spacing: 6) {
-                        Image(systemName: file.icon)
-                            .font(.system(size: 11))
-                            .foregroundStyle(file.isDirectory ? .blue : .secondary)
-                            .frame(width: 16)
-                        Text(file.name)
-                            .font(.system(size: 10))
-                            .lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(file.sizeText)
-                            .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: 46, alignment: .trailing)
-                    }
-                    .padding(.vertical, 1)
-                    .contentShape(Rectangle())
-                    .tag(file)
-                    .contextMenu {
-                        Button("打开") {
-                            if file.isDirectory { loadRemoteFiles(path: file.path) }
-                        }
-                        Button("下载到 Downloads") {
-                            selectedRemote = file
-                            downloadSelected()
-                        }
-                        Divider()
-                        Button("删除", role: .destructive) {
-                            selectedRemote = file
-                            deleteSelected()
-                        }
-                    }
-                    .onTapGesture(count: 2) {
-                        if file.isDirectory {
-                            loadRemoteFiles(path: file.path)
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(remoteFiles) { file in
+                            RemoteFileRow(
+                                file: file,
+                                isSelected: selectedRemote?.path == file.path,
+                                onSelect: { selectedRemote = file },
+                                onOpen: {
+                                    selectedRemote = file
+                                    if file.isDirectory { loadRemoteFiles(path: file.path) }
+                                },
+                                onDownload: {
+                                    selectedRemote = file
+                                    downloadSelected()
+                                },
+                                onDelete: {
+                                    selectedRemote = file
+                                    deleteSelected()
+                                }
+                            )
                         }
                     }
                 }
-                .listStyle(.plain)
+            }
+
+            if !remoteStatus.isEmpty && !isLoading {
+                Divider()
+                Text(remoteStatus)
+                    .font(.system(size: 10))
+                    .foregroundStyle(remoteStatus.contains("完成") ? .green : .secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
             }
         }
         .frame(minHeight: 220)
@@ -227,6 +222,9 @@ struct RemoteFileBrowserView: View {
                     pathText = parsed.path
                     session.remoteBrowserPath = parsed.path
                     remoteFiles = parsed.files
+                    if let selectedRemote, !parsed.files.contains(where: { $0.path == selectedRemote.path }) {
+                        self.selectedRemote = nil
+                    }
                     remoteStatus = parsed.files.isEmpty ? "目录为空" : ""
                 } else {
                     remoteFiles = []
@@ -245,16 +243,31 @@ struct RemoteFileBrowserView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let conn = connection
         let destination = "\(remoteResolvedPath())/\(url.lastPathComponent)"
-        runTransfer(connection: conn, local: url.path, remote: destination, upload: true) {
-            loadRemoteFiles(path: pathText)
+        runTransfer(connection: conn, local: url.path, remote: destination, upload: true, recursive: false) { result in
+            if result.succeeded {
+                remoteStatus = "上传完成: \(url.lastPathComponent)"
+                loadRemoteFiles(path: pathText)
+            }
         }
     }
 
     private func downloadSelected() {
-        guard let connection = session.connection, let selectedRemote else { return }
+        guard let connection = session.connection else { return }
+        guard let selectedRemote else {
+            remoteStatus = "请先选择一个远程文件"
+            return
+        }
+        guard selectedRemote.isDirectory || selectedRemote.isRegularFile else {
+            remoteStatus = "不能下载设备文件、管道或符号链接: \(selectedRemote.name)"
+            return
+        }
         let conn = connection
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first?.path ?? NSHomeDirectory()
-        runTransfer(connection: conn, local: downloads, remote: selectedRemote.path, upload: false) {}
+        runTransfer(connection: conn, local: downloads, remote: selectedRemote.path, upload: false, recursive: selectedRemote.isDirectory) { result in
+            if result.succeeded {
+                remoteStatus = "下载完成: ~/Downloads/\(selectedRemote.name)"
+            }
+        }
     }
 
     private func createFolder() {
@@ -310,7 +323,7 @@ struct RemoteFileBrowserView: View {
         }
     }
 
-    private func runTransfer(connection conn: Connection, local: String, remote: String, upload: Bool, completion: @escaping () -> Void) {
+    private func runTransfer(connection conn: Connection, local: String, remote: String, upload: Bool, recursive: Bool, completion: @escaping (CommandResult) -> Void) {
         isLoading = true
         remoteStatus = upload ? "正在上传..." : "正在下载..."
         DispatchQueue.global().async {
@@ -319,6 +332,9 @@ struct RemoteFileBrowserView: View {
                 args.removeSubrange(portIndex...(portIndex + 1))
             }
             args += ["-P", "\(conn.port)"]
+            if recursive {
+                args.append("-r")
+            }
             if (conn.authMethod == .key || conn.authMethod == .keyWithPassphrase), !conn.privateKeyPath.isEmpty {
                 args += ["-i", conn.privateKeyPath]
             }
@@ -332,9 +348,10 @@ struct RemoteFileBrowserView: View {
             DispatchQueue.main.async {
                 isLoading = false
                 if !result.succeeded {
-                    remoteStatus = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let message = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    remoteStatus = message.isEmpty ? "传输失败" : message
                 }
-                completion()
+                completion(result)
             }
         }
     }
@@ -395,14 +412,59 @@ struct RemoteFileBrowserView: View {
                 let parts = line.split(separator: " ", omittingEmptySubsequences: true)
                 guard parts.count >= 9 else { return nil }
                 let permissions = String(parts[0])
+                let mode = String(permissions.prefix(1))
                 let name = parts[8...].joined(separator: " ")
                 guard name != "." && name != ".." else { return nil }
                 let size = Int64(parts[4]) ?? 0
                 let fullPath = resolvedPath == "/" ? "/\(name)" : "\(resolvedPath)/\(name)"
-                return FileItem(name: name, path: fullPath, isDirectory: permissions.hasPrefix("d"), size: size)
+                return FileItem(name: name, path: fullPath, isDirectory: permissions.hasPrefix("d"), size: size, mode: mode)
             }
             .sorted { ($0.isDirectory && !$1.isDirectory) || ($0.isDirectory == $1.isDirectory && $0.name < $1.name) }
         return (resolvedPath, files)
+    }
+}
+
+struct RemoteFileRow: View {
+    let file: FileItem
+    let isSelected: Bool
+    let onSelect: () -> Void
+    let onOpen: () -> Void
+    let onDownload: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: file.icon)
+                .font(.system(size: 12))
+                .foregroundStyle(file.isDirectory ? .blue : .secondary)
+                .frame(width: 18)
+            Text(file.name)
+                .font(.system(size: 11))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(file.sizeText)
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+                .frame(width: 52, alignment: .trailing)
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 27)
+        .contentShape(Rectangle())
+        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.clear)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.black.opacity(0.08))
+                .frame(height: 1)
+                .padding(.leading, 28)
+        }
+        .onTapGesture { onSelect() }
+        .onTapGesture(count: 2) { onOpen() }
+        .contextMenu {
+            Button("打开") { onOpen() }
+            Button("下载到 Downloads") { onDownload() }
+            Divider()
+            Button("删除", role: .destructive) { onDelete() }
+        }
     }
 }
 

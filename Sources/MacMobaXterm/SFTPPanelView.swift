@@ -180,8 +180,23 @@ struct FileItem: Identifiable, Hashable {
     let path: String
     let isDirectory: Bool
     let size: Int64
+    let mode: String
+
+    init(name: String, path: String, isDirectory: Bool, size: Int64, mode: String = "-") {
+        self.name = name
+        self.path = path
+        self.isDirectory = isDirectory
+        self.size = size
+        self.mode = mode
+    }
     
-    var icon: String { isDirectory ? "folder.fill" : "doc.fill" }
+    var isRegularFile: Bool { mode == "-" }
+    var icon: String {
+        if isDirectory { return "folder.fill" }
+        if mode == "l" { return "link" }
+        if isRegularFile { return "doc.fill" }
+        return "doc.badge.gearshape"
+    }
     var sizeText: String {
         if isDirectory { return "--" }
         if size < 1024 { return "\(size) B" }
