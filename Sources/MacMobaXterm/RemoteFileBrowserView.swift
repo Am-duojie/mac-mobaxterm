@@ -236,7 +236,7 @@ struct RemoteFileBrowserView: View {
         let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
         let conn = sessionManager.connectionWithCredentials(connection)
-        let command = "mkdir -p \((remoteResolvedPath() + "/" + name).shellQuoted)"
+        let command = "mkdir -p \(remoteShellPath(remoteResolvedPath() + "/" + name))"
         runRemoteCommand(connection: conn, command: command) {
             loadRemoteFiles(path: pathText)
         }
@@ -323,7 +323,7 @@ struct RemoteFileBrowserView: View {
             args += ["-o", "BatchMode=yes"]
         }
         let target = conn.username.isEmpty ? conn.host : "\(conn.username)@\(conn.host)"
-        let command = "cd \(path.shellQuoted) && pwd && printf '\\n__MACMOBAXTERM_LS__\\n' && LC_ALL=C ls -la"
+        let command = "cd \(remoteShellPath(path)) && pwd && printf '\\n__MACMOBAXTERM_LS__\\n' && LC_ALL=C ls -la"
         args += [target, command]
 
         if conn.authMethod == .password, !conn.password.isEmpty {
@@ -333,6 +333,15 @@ struct RemoteFileBrowserView: View {
             return CommandRunner.runExpectingPassword("/usr/bin/ssh", args, password: conn.passphrase, timeout: 14)
         }
         return CommandRunner.run("/usr/bin/ssh", args, timeout: 14)
+    }
+
+    private func remoteShellPath(_ path: String) -> String {
+        if path == "~" { return "$HOME" }
+        if path.hasPrefix("~/") {
+            let rest = String(path.dropFirst(2))
+            return rest.isEmpty ? "$HOME" : "$HOME/\(rest.shellQuoted)"
+        }
+        return path.shellQuoted
     }
 
     private func parseRemoteListing(_ output: String, fallbackPath: String) -> (path: String, files: [FileItem])? {

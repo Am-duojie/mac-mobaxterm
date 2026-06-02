@@ -49,12 +49,11 @@ enum CommandRunner {
         password: String,
         timeout: TimeInterval = 20
     ) -> CommandResult {
+        let command = ([executable] + arguments).map(tclQuoted).joined(separator: " ")
         let script = """
         set timeout \(Int(timeout))
-        set password [lindex $argv 0]
-        set executable [lindex $argv 1]
-        set commandArgs [lrange $argv 2 end]
-        spawn -noecho $executable {*}$commandArgs
+        set password \(tclQuoted(password))
+        spawn -noecho \(command)
         expect {
             -re "(?i)password:" {
                 send -- "$password\\r"
@@ -73,12 +72,18 @@ enum CommandRunner {
             }
         }
         """
-        var expectArgs = ["-c", script, password, executable]
-        expectArgs += arguments
-        let result = run("/usr/bin/expect", expectArgs, timeout: timeout + 2)
+        let result = run("/usr/bin/expect", ["-c", script], timeout: timeout + 2)
         if result.status == 124 || result.timedOut {
             return CommandResult(status: result.status, output: "命令超时，已终止。", timedOut: true)
         }
         return result
+    }
+
+    private static func tclQuoted(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "{", with: "\\{")
+            .replacingOccurrences(of: "}", with: "\\}")
+        return "{\(escaped)}"
     }
 }
