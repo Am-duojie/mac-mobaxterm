@@ -10,7 +10,8 @@ struct MenuBarView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
                 Group {
                     MenuBtn("Terminal") {
                         let m = NSMenu()
@@ -57,28 +58,32 @@ struct MenuBarView: View {
                 }
                 Spacer()
             }
+                .padding(.leading, 8)
+                .frame(minWidth: 620, alignment: .leading)
+            }
             .frame(height: 24)
-            .padding(.leading, 8)
 
-            HStack(spacing: 10) {
-                ribbonButton("display.badge.plus", "Session", .blue) { sessionManager.showConnectionEditor = true }
-                ribbonButton("point.3.connected.trianglepath.dotted", "Servers", .cyan) {}
-                ribbonButton("wrench.and.screwdriver.fill", "Tools", .orange) { showNetworkTools = true }
-                ribbonButton("star.fill", "Sessions", .yellow) {}
-                ribbonButton("display", "View", .green) {}
-                ribbonButton("rectangle.split.2x1", "Split", .blue) {}
-                ribbonButton("arrow.left.arrow.right.square", "Tunneling", .teal) {}
-                ribbonButton("shippingbox.fill", "Packages", .indigo) {}
-                ribbonButton("gearshape.2.fill", "Settings", .blue) { showSettings = true }
-                ribbonButton("questionmark.circle.fill", "Help", .blue) {}
-
-                Spacer(minLength: 8)
-
-                ribbonButton("xmark.seal.fill", "X server", .green) {}
-                ribbonButton("power.circle.fill", "Exit", .red) { NSApplication.shared.terminate(nil) }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ribbonButton("display.badge.plus", "Session", .blue) { sessionManager.showConnectionEditor = true }
+                    ribbonButton("point.3.connected.trianglepath.dotted", "Servers", .cyan) {}
+                    ribbonButton("wrench.and.screwdriver.fill", "Tools", .orange) { showNetworkTools = true }
+                    ribbonButton("gamecontroller.fill", "Games", .green) {}
+                    ribbonButton("star.fill", "Sessions", .yellow) {}
+                    ribbonButton("display", "View", .green) {}
+                    ribbonButton("rectangle.split.2x1", "Split", .blue) {}
+                    ribbonButton("arrow.left.arrow.right.square", "MultiExec", .indigo) {}
+                    ribbonButton("arrow.triangle.branch", "Tunneling", .teal) {}
+                    ribbonButton("shippingbox.fill", "Packages", .purple) {}
+                    ribbonButton("gearshape.2.fill", "Settings", .blue) { showSettings = true }
+                    ribbonButton("questionmark.circle.fill", "Help", .blue) {}
+                    ribbonButton("xmark.seal.fill", "X server", .green) {}
+                    ribbonButton("power.circle.fill", "Exit", .red) { NSApplication.shared.terminate(nil) }
+                }
+                .padding(.horizontal, 10)
+                .frame(minWidth: 1120, alignment: .leading)
             }
             .frame(height: 68)
-            .padding(.horizontal, 10)
             .background(Color(NSColor.windowBackgroundColor))
 
             HStack(spacing: 0) {
@@ -120,7 +125,7 @@ struct MenuBarView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.primary)
             }
-            .frame(width: 70, height: 58)
+            .frame(width: 66, height: 58)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

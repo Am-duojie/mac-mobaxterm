@@ -27,47 +27,79 @@ struct SidebarView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 4) {
-                Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(.secondary)
-                TextField("查找会话或服务器...", text: $searchText).textFieldStyle(.plain).font(.system(size: 11))
-            }.padding(8).background(Color(NSColor.textBackgroundColor))
-            
-            // 标签切换
-            Picker("", selection: $selectedTab) {
-                ForEach(SidebarTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented).padding(.horizontal, 8).padding(.vertical, 4)
-            
+        HStack(spacing: 0) {
+            sidebarRail
             Divider()
-            
-            if selectedTab == .sessions {
-                VStack(spacing: 0) {
-                    sessionsList
-                    if let session = selectedRemoteFileSession {
-                        Divider()
-                        RemoteFileBrowserView(session: session)
-                            .frame(minHeight: 220, idealHeight: 280, maxHeight: 360)
-                    }
+            VStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(.secondary)
+                    TextField("Quick connect...", text: $searchText).textFieldStyle(.plain).font(.system(size: 12))
                 }
-            } else {
-                toolsList
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 8) {
-                Button { sessionManager.openNewConnectionEditor() } label: { Image(systemName: "plus.circle") }
-                    .buttonStyle(.plain).help("新建会话")
-                Button { sessionManager.addFolder() } label: { Image(systemName: "folder.badge.plus") }
-                    .buttonStyle(.plain).help("新建文件夹")
-                Button { sessionManager.openLocalSession() } label: { Image(systemName: "terminal") }
-                    .buttonStyle(.plain).help("本地终端")
+                .padding(.horizontal, 8)
+                .frame(height: 32)
+                .background(Color.white)
+
+                Divider()
+
+                if selectedTab == .sessions {
+                    VStack(spacing: 0) {
+                        sessionsList
+                        if let session = selectedRemoteFileSession {
+                            Divider()
+                            RemoteFileBrowserView(session: session)
+                                .frame(minHeight: 220, idealHeight: 280, maxHeight: 360)
+                        }
+                    }
+                } else {
+                    toolsList
+                }
+
                 Spacer()
-            }.padding(.horizontal, 10).padding(.vertical, 6)
+
+                HStack(spacing: 8) {
+                    Button { sessionManager.openNewConnectionEditor() } label: { Image(systemName: "plus.circle") }
+                        .buttonStyle(.plain).help("新建会话")
+                    Button { sessionManager.addFolder() } label: { Image(systemName: "folder.badge.plus") }
+                        .buttonStyle(.plain).help("新建文件夹")
+                    Button { sessionManager.openLocalSession() } label: { Image(systemName: "terminal") }
+                        .buttonStyle(.plain).help("本地终端")
+                    Spacer()
+                }.padding(.horizontal, 10).padding(.vertical, 6)
+            }
         }
         .background(Color(NSColor.controlBackgroundColor))
         .onAppear { expandedFolders = Set(sessionManager.folders.map { $0.id }) }
         .sheet(isPresented: $showNetworkTools) { NetworkToolsView() }
+    }
+
+    private var sidebarRail: some View {
+        VStack(spacing: 10) {
+            railButton(.sessions, icon: "star.fill", help: "User sessions")
+            railButton(.tools, icon: "wrench.and.screwdriver.fill", help: "Tools")
+            Button { sessionManager.openNewConnectionEditor() } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 17))
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+            .help("新建会话")
+            Spacer()
+        }
+        .padding(.top, 8)
+        .frame(width: 44)
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private func railButton(_ tab: SidebarTab, icon: String, help: String) -> some View {
+        Button { selectedTab = tab } label: {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(selectedTab == tab ? .yellow : .secondary)
+                .frame(width: 34, height: 34)
+                .background(RoundedRectangle(cornerRadius: 4).fill(selectedTab == tab ? Color.accentColor.opacity(0.12) : Color.clear))
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 
     private var selectedRemoteFileSession: Session? {
@@ -92,17 +124,24 @@ struct SidebarView: View {
                 Divider()
                 
                 if !sessionManager.sessions.isEmpty {
-                    Section {
+                    SidebarSectionHeader(title: "Active sessions")
+                    VStack(spacing: 0) {
                         ForEach(sessionManager.sessions) { ActiveSessionRow(session: $0) }
-                    } header: {
-                        HStack {
-                            Text("活跃会话").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-                            Spacer()
-                            Text("\(sessionManager.sessions.count)").font(.system(size: 9)).foregroundStyle(.tertiary)
-                        }.padding(.horizontal, 10).padding(.vertical, 4)
                     }
                     Divider().padding(.vertical, 4)
                 }
+
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.square.fill")
+                        .font(.system(size: 21))
+                        .foregroundStyle(.blue)
+                        .frame(width: 28)
+                    Text("User sessions")
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer()
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 32)
                 
                 ForEach(filteredFolders, id: \.folder.id) { item in
                     FolderSection(folder: item.folder, connections: item.connections,
@@ -218,7 +257,10 @@ struct ConnectionRow: View {
     
     var body: some View {
         HStack(spacing: 6) {
-            Circle().fill(colorForTag(connection.colorTag)).frame(width: 6, height: 6)
+            Image(systemName: iconForConnection(connection))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(colorForTag(connection.colorTag))
+                .frame(width: 24)
             VStack(alignment: .leading, spacing: 0) {
                 if isRenaming {
                     TextField("会话名称", text: $draftName)
@@ -235,7 +277,8 @@ struct ConnectionRow: View {
             if connection.isFavorite { Image(systemName: "star.fill").font(.system(size: 7)).foregroundStyle(.yellow) }
             Text(connection.type.rawValue.uppercased())
                 .font(.system(size: 8, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
+                .frame(width: 40, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .frame(height: 44)
@@ -264,6 +307,19 @@ struct ConnectionRow: View {
         case "red": return .red; case "orange": return .orange; case "yellow": return .yellow
         case "green": return .green; case "blue": return .blue; case "purple": return .purple
         case "pink": return .pink; default: return .gray
+        }
+    }
+
+    private func iconForConnection(_ connection: Connection) -> String {
+        switch connection.type {
+        case .ssh: return "key.fill"
+        case .sftp: return "globe"
+        case .ftp: return "folder.fill"
+        case .telnet: return "network"
+        case .rdp: return "display"
+        case .vnc: return "macwindow"
+        case .serial: return "cable.connector"
+        case .local: return "terminal"
         }
     }
 
