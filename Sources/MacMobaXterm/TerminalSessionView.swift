@@ -86,13 +86,9 @@ struct SwiftTerminalHost: NSViewRepresentable {
             var args = SSHRuntimeOptions.baseArgs(port: conn.port)
             if (conn.authMethod == .key || conn.authMethod == .keyWithPassphrase), !conn.privateKeyPath.isEmpty { args += ["-i", conn.privateKeyPath] }
             let target = conn.username.isEmpty ? conn.host : "\(conn.username)@\(conn.host)"
-            if !conn.remotePath.isEmpty {
-                args.append("-t")
-            }
+            args.append("-t")
             args.append(target)
-            if !conn.remotePath.isEmpty {
-                args.append("cd \(conn.remotePath.shellQuoted) && exec $SHELL -l")
-            }
+            args.append(remoteShellBootstrap(for: conn))
             terminal.startProcess(executable: "/usr/bin/ssh", args: args, environment: env)
         case .sftp:
             guard let conn = session.connection else { return }
@@ -119,6 +115,13 @@ struct SwiftTerminalHost: NSViewRepresentable {
             terminal.startProcess(executable: "/usr/bin/screen", args: [port, baud, format], environment: env)
         case .rdp, .vnc: break
         }
+    }
+
+    private func remoteShellBootstrap(for conn: Connection) -> String {
+        let cdCommand = conn.remotePath.isEmpty ? "" : "cd \(conn.remotePath.shellQuoted) 2>/dev/null; "
+        return """
+        \(cdCommand)export PS1='$(printf '"'"'\\033]7;file://%s%s\\033\\\\'"'"' "$(hostname)" "$PWD")$(hostname):$PWD\\$ '; exec ${SHELL:-/bin/sh} -i
+        """
     }
     
     class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
